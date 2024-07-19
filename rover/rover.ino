@@ -1,7 +1,8 @@
-// Remove Comment to Enable Alternate XBOX Receiver Mode
+// Add Comment to Disable Alternate XBOX Receiver Mode
 #define XBOX_ALT_MODE
 
- #include "CytronMotorDriver.h"
+#include <Arduino.h>
+#include "CytronMotorDriver.h"
 #include <math.h>
 #include <SoftwareSerial.h>
 #include <SPI.h>
@@ -12,13 +13,15 @@
 #include <XBOXRECV.h>
 #endif
 
-
+// Define the deadzone and controller id
 #define conid 0
 #define deadzone 0
 
+// Define the minimum and maximum speed
 #define minSpeed 10
 #define maxSpeed 255
 
+// Define the PWM and DIR pins for the motors
 #define pwm1 3
 #define pwm2 2
 #define pwm3 5
@@ -32,15 +35,15 @@
 #define dir5 38
 #define dir6 39
 
-
-CytronMD motor1(PWM_DIR, pwm1, dir1); 
+// Create the motor objects
+CytronMD motor1(PWM_DIR, pwm1, dir1);
 CytronMD motor2(PWM_DIR, pwm2, dir2);
 CytronMD motor3(PWM_DIR, pwm3, dir3);
 CytronMD motor4(PWM_DIR, pwm4, dir4);
 CytronMD motor5(PWM_DIR, pwm5, dir5);
 CytronMD motor6(PWM_DIR, pwm6, dir6);
 
-
+// Create the USB object
 USB Usb;
 #ifdef XBOX_ALT_MODE
 XBOXUSB Xbox(&Usb);
@@ -48,16 +51,20 @@ XBOXUSB Xbox(&Usb);
 XBOXRECV Xbox(&Usb);
 #endif
 
-
-bool xboxConnCheck() {
+// Define Functions
+bool xboxConnCheck()
+{
 #ifdef XBOX_ALT_MODE
-  if (Xbox.Xbox360Connected) {
+  if (Xbox.Xbox360Connected)
+  {
     return true;
   }
   return false;
 #else
-  if (Xbox.XboxReceiverConnected) {
-    if (Xbox.Xbox360Connected[conid]) {
+  if (Xbox.XboxReceiverConnected)
+  {
+    if (Xbox.Xbox360Connected[conid])
+    {
       return true;
     }
   }
@@ -67,8 +74,8 @@ bool xboxConnCheck() {
 
 int left = 0, right = 0;
 
-
-void updateMotors(int YSpeed, int TSpeed) {
+void updateMotors(int YSpeed, int TSpeed)
+{
   left = constrain(YSpeed - TSpeed, -255, 255);
   right = constrain(YSpeed + TSpeed, -255, 255);
   Serial.print(left);
@@ -81,15 +88,17 @@ void updateMotors(int YSpeed, int TSpeed) {
   motor6.setSpeed(right);
 }
 
-
-void setup() {
+// Setup Function
+void setup()
+{
   Wire.begin();
   Serial.begin(9600);
 #if !defined(_MIPSEL_)
   while (!Serial)
     ;
 #endif
-  if (Usb.Init() == -1) {
+  if (Usb.Init() == -1)
+  {
     Serial.print(F("\r\nOSC did not start"));
     while (1)
       ;
@@ -99,32 +108,42 @@ void setup() {
   updateMotors(0, 0);
 }
 
-
-void loop() {
+// Loop Function
+void loop()
+{
   Usb.Task();
-  if (xboxConnCheck()) {
-    #ifdef XBOX_ALT_MODE
-      int leftHatY = Xbox.getAnalogHat(LeftHatY);
-      int rightHatX = Xbox.getAnalogHat(RightHatX);
-    #else
-      int leftHatY = Xbox.getAnalogHat(LeftHatY, conid);
-      int rightHatX = Xbox.getAnalogHat(RightHatX, conid);
-    #endif
+  if (xboxConnCheck())
+  {
+#ifdef XBOX_ALT_MODE
+    int leftHatY = Xbox.getAnalogHat(LeftHatY);
+    int rightHatX = Xbox.getAnalogHat(RightHatX);
+#else
+    int leftHatY = Xbox.getAnalogHat(LeftHatY, conid);
+    int rightHatX = Xbox.getAnalogHat(RightHatX, conid);
+#endif
 
     int YSpeed = 0, TSpeed = 0;
 
-    if (leftHatY > deadzone) {
+    if (leftHatY > deadzone)
+    {
       YSpeed = map(leftHatY, deadzone, 32767, minSpeed, maxSpeed);
-    } else if (leftHatY < -deadzone) {
+    }
+    else if (leftHatY < -deadzone)
+    {
       YSpeed = map(leftHatY, -32768, -deadzone, -maxSpeed, -minSpeed);
     }
-    if (rightHatX > deadzone) {
+    if (rightHatX > deadzone)
+    {
       TSpeed = map(rightHatX, deadzone, 32767, minSpeed, maxSpeed);
-    } else if (rightHatX < -deadzone) {
+    }
+    else if (rightHatX < -deadzone)
+    {
       TSpeed = map(rightHatX, -32768, -deadzone, -maxSpeed, -minSpeed);
     }
     updateMotors(YSpeed, TSpeed);
-  } else {
+  }
+  else
+  {
     updateMotors(0, 0);
   }
 }
